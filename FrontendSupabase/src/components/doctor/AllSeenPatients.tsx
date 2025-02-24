@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Loader, Search, Calendar, MapPin, Phone, User, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -44,6 +44,65 @@ export const AllSeenPatients: React.FC<AllSeenPatientsProps> = ({ doctorId }) =>
   const [filteredGroupedPatients, setFilteredGroupedPatients] = useState<GroupedPatients>({});
   const [seenAppointments, setSeenAppointments] = useState<string[]>([]);
 
+  const filterPatients = useCallback(() => {
+    let filtered = { ...groupedPatients };
+
+    if (selectedDate) {
+      // Convert selected date to start of day in local timezone
+      const selectedDateObj = new Date(selectedDate);
+      selectedDateObj.setHours(0, 0, 0, 0);
+
+      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
+        const filteredPatients = patients.filter(({ seenPatient }) => {
+          const patientDate = new Date(seenPatient.seen_at);
+          patientDate.setHours(0, 0, 0, 0);
+          return patientDate.getTime() === selectedDateObj.getTime();
+        });
+
+        if (filteredPatients.length > 0) {
+          // Use formatted date as key
+          const formattedDate = selectedDateObj.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          acc[formattedDate] = filteredPatients;
+        }
+        return acc;
+      }, {} as GroupedPatients);
+    }
+
+    if (selectedRegion) {
+      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
+        const filteredPatients = patients.filter(({ appointmentDetails }) => 
+          appointmentDetails.region_name === selectedRegion
+        );
+        if (filteredPatients.length > 0) {
+          acc[date] = filteredPatients;
+        }
+        return acc;
+      }, {} as GroupedPatients);
+    }
+
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
+        const filteredPatients = patients.filter(({ appointmentDetails }) => 
+          appointmentDetails.patient_name.toLowerCase().includes(searchLower) ||
+          appointmentDetails.patient_phone.includes(searchTerm) ||
+          appointmentDetails.id.includes(searchTerm)
+        );
+        if (filteredPatients.length > 0) {
+          acc[date] = filteredPatients;
+        }
+        return acc;
+      }, {} as GroupedPatients);
+    }
+
+    setFilteredGroupedPatients(filtered);
+  }, [groupedPatients, searchTerm, selectedRegion, selectedDate]);
+
   useEffect(() => {
     fetchSeenPatients();
     fetchRegions();
@@ -51,7 +110,7 @@ export const AllSeenPatients: React.FC<AllSeenPatientsProps> = ({ doctorId }) =>
 
   useEffect(() => {
     filterPatients();
-  }, [searchTerm, selectedRegion, selectedDate, groupedPatients]);
+  }, [filterPatients]);
 
   const fetchRegions = async () => {
     try {
@@ -185,65 +244,6 @@ export const AllSeenPatients: React.FC<AllSeenPatientsProps> = ({ doctorId }) =>
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterPatients = () => {
-    let filtered = { ...groupedPatients };
-
-    if (selectedDate) {
-      // Convert selected date to start of day in local timezone
-      const selectedDateObj = new Date(selectedDate);
-      selectedDateObj.setHours(0, 0, 0, 0);
-
-      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
-        const filteredPatients = patients.filter(({ seenPatient }) => {
-          const patientDate = new Date(seenPatient.seen_at);
-          patientDate.setHours(0, 0, 0, 0);
-          return patientDate.getTime() === selectedDateObj.getTime();
-        });
-
-        if (filteredPatients.length > 0) {
-          // Use formatted date as key
-          const formattedDate = selectedDateObj.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          });
-          acc[formattedDate] = filteredPatients;
-        }
-        return acc;
-      }, {} as GroupedPatients);
-    }
-
-    if (selectedRegion) {
-      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
-        const filteredPatients = patients.filter(({ appointmentDetails }) => 
-          appointmentDetails.region_name === selectedRegion
-        );
-        if (filteredPatients.length > 0) {
-          acc[date] = filteredPatients;
-        }
-        return acc;
-      }, {} as GroupedPatients);
-    }
-
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = Object.entries(filtered).reduce((acc, [date, patients]) => {
-        const filteredPatients = patients.filter(({ appointmentDetails }) => 
-          appointmentDetails.patient_name.toLowerCase().includes(searchLower) ||
-          appointmentDetails.patient_phone.includes(searchTerm) ||
-          appointmentDetails.id.includes(searchTerm)
-        );
-        if (filteredPatients.length > 0) {
-          acc[date] = filteredPatients;
-        }
-        return acc;
-      }, {} as GroupedPatients);
-    }
-
-    setFilteredGroupedPatients(filtered);
   };
 
   const handleReset = () => {
@@ -407,7 +407,7 @@ export const AllSeenPatients: React.FC<AllSeenPatientsProps> = ({ doctorId }) =>
                               <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   onClick={() => openHistory(appointmentDetails.visit_patient_id)}
-                                  className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm"
+                                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-medium text-sm focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                                 >
                                   Check History
                                 </button>
