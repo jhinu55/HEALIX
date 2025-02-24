@@ -4,7 +4,7 @@ import logging
 
 # Load environment variables from .env if available
 load_dotenv()
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = <GROQ_API_KEY>
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
