@@ -449,12 +449,16 @@ export const CommunityHealth: React.FC = () => {
                       className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
                     >
                       <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                        {section.title}
+                        {section?.title || 'Untitled Section'}
                       </h3>
                       <div className="prose text-gray-600 max-w-none">
-                        {section.content.split('\n').map((line, index) => (
-                          <p key={index} className="mb-3">{line}</p>
-                        ))}
+                        {section?.content ? 
+                          section.content.split('\n').map((line, index) => (
+                            <p key={index} className="mb-3">{line}</p>
+                          ))
+                          : 
+                          <p>No content available</p>
+                        }
                       </div>
                     </div>
                   ))}

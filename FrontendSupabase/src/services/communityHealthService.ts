@@ -126,5 +126,19 @@ export const communityHealthService = {
       console.error('Error generating analysis:', error);
       throw error;
     }
+  },
+
+  getAgeDemographics: async (regionId: string) => {
+    try {
+      const { data } = await supabase
+        .from('appointments')
+        .select('age')
+        .eq('region_id', regionId);
+
+      return data?.map(d => d.age) || [];
+    } catch (error) {
+      console.error('Error fetching age demographics:', error);
+      return [];
+    }
   }
 };

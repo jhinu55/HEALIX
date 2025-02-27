@@ -106,9 +106,9 @@ export default function CheckHistory() {
     try {
       const data = await patientAnalysisService.generateAnalysis(visitPatientId);
       setAnalysisData(data);
-    } catch (error) {
-      setAnalysisError('Failed to generate analysis');
-      console.error(error);
+    } catch (error: any) {
+      setAnalysisError(error.message || 'Failed to generate analysis');
+      console.error('Analysis error:', error);
     } finally {
       setAnalysisLoading(false);
     }

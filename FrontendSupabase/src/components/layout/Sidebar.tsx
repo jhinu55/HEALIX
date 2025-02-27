@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Search,
   Heart,
-  Bot
+  Bot,
+  Pill
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -75,10 +76,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ expanded, onToggle }) => {
     { icon: Calendar, label: 'Manage Appointments', path: '/assistant/appointments' },
     { icon: Users, label: 'Doctors', path: '/assistant/doctors' },
     { icon: MessageCircle, label: 'Messages', path: '/assistant/messages' },
-    { icon: Activity, label: 'Community Health', path: '/assistant/community-health' }
   ] : [
     { icon: Home, label: 'Overview', path: '/doctor' },
     { icon: Users, label: 'All Seen Patients', path: '/doctor/patients' },
+    { icon: Pill, label: 'Medicine Management', path: '/doctor/medicine-management' },
     { icon: MessageCircle, label: 'Messages', path: '/doctor/messages' },
     { icon: Activity, label: 'Community Health', path: '/doctor/community-health' },
     { icon: Bot, label: 'Chat with AI', path: '/doctor/chat-ai' }

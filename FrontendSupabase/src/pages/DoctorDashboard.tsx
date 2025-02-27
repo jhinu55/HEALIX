@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, ClipboardList, Activity, Loader } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
-import { StatCard } from '../components/dashboard/StatCard';
+// import { StatCard } from '../components/dashboard/StatCard';
 import { AppointmentList } from '../components/doctor/AppointmentList';
 import { CommunityHealth } from '../components/doctor/CommunityHealth';
-import { AllPatientsList } from '../components/doctor/AllPatientsList';
+// import { AllPatientsList } from '../components/doctor/AllPatientsList';
 import { ChatSection } from '../components/chat/ChatSection';
 import { supabase } from '../lib/supabase';
 import { useLocation } from 'react-router-dom';
 import { useDoctor } from '../hooks/useDoctor';
 import { AllSeenPatients } from '../components/doctor/AllSeenPatients';
 import { AddAppointmentModal } from '../components/doctor/AddAppointmentModal';
+import { SpeechTranslator } from '../components/doctor/SpeechTranslator';
+import { MedicineManagement } from '../components/doctor/MedicineManagement';
 
 // Remove the entire Dashboard component as it's not needed
 
@@ -121,17 +123,20 @@ export const DoctorDashboard = () => {
     switch (location.pathname) {
       case '/doctor/patients':
         return <AllSeenPatients doctorId={doctor.ref_id} />;
+      case '/doctor/medicine-management':
+        return <MedicineManagement />;
       case '/doctor/messages':
         return <ChatSection userRole="doctor" />;
       case '/doctor/community-health':
         return <CommunityHealth />;
       default:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            <div className="w-full">
+              <SpeechTranslator variant="full" />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* {stats.map((stat) => (
-                <StatCard key={stat.title} {...stat} />
-              ))} */}
+              {/* Stats cards */}
             </div>
             <div>
               <AppointmentList doctorRefId={doctor.ref_id} />

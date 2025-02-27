@@ -14,37 +14,33 @@ interface EmailRequest {
 export const aiChatService = {
   sendMessage: async (
     question: string,
-    conversations: Array<{ role: string; content: string }>,
     option: string,
-    imgurl: string
+    imgurl: string,
+    conversationsNew: Array<{ role: string; content: string }>,
+    visit_patient_id: string | null
   ) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/doctor/chat-ai`, {  // Updated endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/doctor/chat-ai`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           question,
-          conversationsNew: conversations,
           option,
-          imgurl
+          imgurl,
+          conversationsNew,
+          visit_patient_id
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Server response error:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: errorData
-        });
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Network response was not ok');
       }
 
       return await response.json();
     } catch (error) {
-      console.error('Network or parsing error:', error);
+      console.error('Error in aiChatService:', error);
       throw error;
     }
   }

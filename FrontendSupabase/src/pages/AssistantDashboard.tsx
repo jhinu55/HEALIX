@@ -6,7 +6,7 @@ import { ChatSection } from '../components/chat/ChatSection';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAssistant } from '../hooks/useAssistant';
 import { Loader } from 'lucide-react';
-import { CommunityHealth } from '../components/assistant/CommunityHealth';
+
 
 export const AssistantDashboard = () => {
   const location = useLocation();
@@ -43,7 +43,8 @@ export const AssistantDashboard = () => {
       case '/assistant/messages':
         return <ChatSection userRole="assistant" userId={assistant.id} />;
       case '/assistant/community-health':
-        return <CommunityHealth />;
+        // return <CommunityHealth />;
+        break;
       default:
         return <DoctorList regionId={assistant.region_id} />;
     }

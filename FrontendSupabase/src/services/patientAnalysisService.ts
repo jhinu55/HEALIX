@@ -27,7 +27,10 @@ export const patientAnalysisService = {
 
   generateAnalysis: async (visitPatientId: string): Promise<AnalysisResponse> => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/analysis`, {
+      const apiUrl = `${import.meta.env.VITE_API_URL}/analysis`;
+      console.log('Attempting to fetch from:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -41,7 +44,11 @@ export const patientAnalysisService = {
 
       return await response.json();
     } catch (error) {
-      console.error('Error generating analysis:', error);
+      console.error('Network error details:', {
+        error,
+        url: apiUrl,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

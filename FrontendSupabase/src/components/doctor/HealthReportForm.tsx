@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { SpeechTranslator } from './SpeechTranslator';
+import { v4 as uuidv4 } from 'uuid';
 
 interface HealthReportFormProps {
   patientId: string;
@@ -9,6 +11,7 @@ interface HealthReportFormProps {
   regionName: string;
   regionId: string;
   onClose: () => void;
+  visit_patient_id?: string; // Added: Optional visit_patient_id prop
 }
 
 type Section = 
@@ -95,7 +98,8 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
   patientPhone,
   regionName,
   regionId,
-  onClose
+  onClose,
+  visit_patient_id // Receive visit_patient_id as a prop
 }) => {
   
 
@@ -109,6 +113,7 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
       housing_condition: '',
       water_access: false,
       toilet_access: '',
+      visit_patient_id: visit_patient_id || '', // Initialize with the prop value
     },
     generalHealth: {
       main_complaint: '',
@@ -200,6 +205,7 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
         dosage: string;
         frequency: string;
         duration: string;
+        quantity: number;
       }>,
       lifestyle_advice: '',
       lab_tests: [] as string[],
@@ -212,7 +218,8 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
     medicine_name: '',
     dosage: '',
     frequency: '',
-    duration: ''
+    duration: '',
+    quantity: 1
   });
 
   const [existingRecord, setExistingRecord] = useState<{ id?: string } | null>(null);
@@ -221,119 +228,143 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
 
   useEffect(() => {
     const loadExistingData = async () => {
-      const existingRecord = await fetchExistingHealthRecord(patientId);
-      if (existingRecord) {
-        setExistingRecord(existingRecord);
-        setFormData({
-          basicInfo: {
-            gender: existingRecord.gender || '',
-            occupation: existingRecord.occupation || '',
-            education_level: existingRecord.education_level || '',
-            income_level: existingRecord.income_level || '',
-            family_size: existingRecord.family_size?.toString() || '',
-            housing_condition: existingRecord.housing_condition || '',
-            water_access: existingRecord.water_access || false,
-            toilet_access: existingRecord.toilet_access || '',
-          },
-          generalHealth: existingRecord.general_health || {
-            main_complaint: '',
-            symptom_duration: '',
-            previous_symptoms: false
-          },
-          painDiscomfort: existingRecord.pain_discomfort || {
-            pain_location: '',
-            pain_level: 0,
-            pain_triggers: ''
-          },
-          digestionAppetite: existingRecord.digestion_appetite || {
-            stomach_pain: false,
-            nausea: false,
-            appetite_changes: false,
-            weight_loss: false,
-            diarrhea: '',
-            constipation: ''
-          },
-          chronicConditions: existingRecord.chronic_conditions || {
-            high_blood_pressure: false,
-            diabetes: false,
-            heart_disease: false,
-            current_medications: '',
-            known_allergies: ''
-          },
-          lifestyleHabits: existingRecord.lifestyle_habits || {
-            meal_frequency: '',
-            diet: '',
-            smoking: false,
-            alcohol_consumption: false,
-            tobacco_chewing: false,
-            physical_activity: ''
-          },
-          womensHealth: existingRecord.womens_health || {
-            last_menstrual_period: '',
-            pregnancy_concerns: false,
-            breastfeeding_concerns: false
-          },
-          familyCommunityHealth: existingRecord.family_community_health || {
-            family_symptoms: false,
-            recent_outbreaks: false,
-            community_illnesses: false
-          },
-          mentalHealth: existingRecord.mental_health || {
-            emotional_state: '',
-            sleep_quality: false,
-            stressful_events: '',
-            sleep_duration: ''
-          },
-          vitalSigns: {
-            heart_rate: existingRecord.heart_rate?.toString() || '',
-            blood_pressure: existingRecord.blood_pressure || '',
-            respiratory_rate: existingRecord.respiratory_rate?.toString() || '',
-            body_temperature: existingRecord.body_temperature?.toString() || '',
-            weight: existingRecord.weight?.toString() || '',
-            height: existingRecord.height?.toString() || '',
-            bmi: existingRecord.bmi?.toString() || '',
-            blood_glucose: existingRecord.blood_glucose?.toString() || '',
-            oxygen_saturation: existingRecord.oxygen_saturation?.toString() || '',
-            pain_level: existingRecord.pain_level?.toString() || ''
-          },
-          heartHealth: existingRecord.heart_health || {
-            lvh: false,
-            ihd: false,
-            cvd: false,
-            retinopathy: false,
-            chest_pain_type: '',
-            resting_bp: '',
-            cholesterol: '',
-            fasting_bs: false,
-            resting_ecg: '',
-            max_hr: '',
-            exercise_angina: false,
-            oldpeak: '',
-            st_slope: ''
-          },
-          vaccinationHistory: {
-            received_vaccines: existingRecord.vaccination_history || '',
-            childhood_vaccines: existingRecord.childhood_vaccines || [],
-            older_vaccines: existingRecord.older_vaccines || [],
-            recent_vaccines: existingRecord.recent_vaccines || [],
-            major_infections: existingRecord.major_infections || [],
-            family_illness: existingRecord.family_illness_history || ''
-          },
-          prescription: {
-            medications: existingRecord.medication || [],
-            lifestyle_advice: existingRecord.lifestyle_advice || '',
-            lab_tests: existingRecord.lab_tests ? 
-              (Array.isArray(existingRecord.lab_tests) ? 
-                existingRecord.lab_tests : 
-                existingRecord.lab_tests.split(', ')) : [],
-            follow_up_date: existingRecord.follow_up_date || ''
-          }
-        });
+      if (patientId) {
+        const { data: existingRecord, error } = await supabase
+          .from('patient_health_records')
+          .select('*')
+          .eq('patient_id', patientId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching existing record:", error);
+          return;
+        }
+
+        if (existingRecord) {
+          setExistingRecord(existingRecord);
+          setFormData(prevFormData => ({
+            ...prevFormData,
+            basicInfo: {
+              gender: existingRecord.gender || '',
+              occupation: existingRecord.occupation || '',
+              education_level: existingRecord.education_level || '',
+              income_level: existingRecord.income_level || '',
+              family_size: existingRecord.family_size?.toString() || '',
+              housing_condition: existingRecord.housing_condition || '',
+              water_access: existingRecord.water_access || false,
+              toilet_access: existingRecord.toilet_access || '',
+              visit_patient_id: existingRecord.visit_patient_id || '', // Load existing visit_patient_id or keep empty
+            },
+            generalHealth: existingRecord.general_health || {
+              main_complaint: '',
+              symptom_duration: '',
+              previous_symptoms: false
+            },
+            painDiscomfort: existingRecord.pain_discomfort || {
+              pain_location: '',
+              pain_level: 0,
+              pain_triggers: ''
+            },
+            digestionAppetite: existingRecord.digestion_appetite || {
+              stomach_pain: false,
+              nausea: false,
+              appetite_changes: false,
+              weight_loss: false,
+              diarrhea: '',
+              constipation: ''
+            },
+            chronicConditions: existingRecord.chronic_conditions || {
+              high_blood_pressure: false,
+              diabetes: false,
+              heart_disease: false,
+              current_medications: '',
+              known_allergies: ''
+            },
+            lifestyleHabits: existingRecord.lifestyle_habits || {
+              meal_frequency: '',
+              diet: '',
+              smoking: false,
+              alcohol_consumption: false,
+              tobacco_chewing: false,
+              physical_activity: ''
+            },
+            womensHealth: existingRecord.womens_health || {
+              last_menstrual_period: '',
+              pregnancy_concerns: false,
+              breastfeeding_concerns: false
+            },
+            familyCommunityHealth: existingRecord.family_community_health || {
+              family_symptoms: false,
+              recent_outbreaks: false,
+              community_illnesses: false
+            },
+            mentalHealth: existingRecord.mental_health || {
+              emotional_state: '',
+              sleep_quality: false,
+              stressful_events: '',
+              sleep_duration: ''
+            },
+            vitalSigns: {
+              heart_rate: existingRecord.heart_rate?.toString() || '',
+              blood_pressure: existingRecord.blood_pressure || '',
+              respiratory_rate: existingRecord.respiratory_rate?.toString() || '',
+              body_temperature: existingRecord.body_temperature?.toString() || '',
+              weight: existingRecord.weight?.toString() || '',
+              height: existingRecord.height?.toString() || '',
+              bmi: existingRecord.bmi?.toString() || '',
+              blood_glucose: existingRecord.blood_glucose?.toString() || '',
+              oxygen_saturation: existingRecord.oxygen_saturation?.toString() || '',
+              pain_level: existingRecord.pain_level?.toString() || ''
+            },
+            heartHealth: existingRecord.heart_health || {
+              lvh: false,
+              ihd: false,
+              cvd: false,
+              retinopathy: false,
+              chest_pain_type: '',
+              resting_bp: '',
+              cholesterol: '',
+              fasting_bs: false,
+              resting_ecg: '',
+              max_hr: '',
+              exercise_angina: false,
+              oldpeak: '',
+              st_slope: ''
+            },
+            vaccinationHistory: {
+              received_vaccines: existingRecord.vaccination_history || '',
+              childhood_vaccines: existingRecord.childhood_vaccines || [],
+              older_vaccines: existingRecord.older_vaccines || [],
+              recent_vaccines: existingRecord.recent_vaccines || [],
+              major_infections: existingRecord.major_infections || [],
+              family_illness: existingRecord.family_illness_history || ''
+            },
+            prescription: {
+              medications: existingRecord.medication || [],
+              lifestyle_advice: existingRecord.lifestyle_advice || '',
+              lab_tests: existingRecord.lab_tests ? 
+                (Array.isArray(existingRecord.lab_tests) ? 
+                  existingRecord.lab_tests : 
+                  existingRecord.lab_tests.split(', ')) : [],
+              follow_up_date: existingRecord.follow_up_date || ''
+            }
+          }));
+        }
       }
     };
 
     loadExistingData();
   }, [patientId]);
+
+  useEffect(() => {
+    setFormData(prevFormData => ({
+      ...prevFormData,
+      basicInfo: {
+        ...prevFormData.basicInfo,
+        visit_patient_id: visit_patient_id || '',
+      }
+    }));
+  }, [visit_patient_id]); // Update when visit_patient_id prop changes
 
   const [activeSection, setActiveSection] = useState<Section>('basic');
 
@@ -341,10 +372,13 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
     e.preventDefault();
     
     try {
+      const recordId = existingRecord?.id || uuidv4();
+
       const payload = {
-        id: existingRecord?.id,
+        id: recordId,
         patient_name: patientName,
         patient_id: patientId,
+        visit_patient_id: formData.basicInfo.visit_patient_id || patientId,
         region_id: regionId,
         general_health: formData.generalHealth,
         pain_discomfort: formData.painDiscomfort,
@@ -417,7 +451,7 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
           medications: [...formData.prescription.medications, newMedicine]
         }
       });
-      setNewMedicine({ medicine_name: '', dosage: '', frequency: '', duration: '' });
+      setNewMedicine({ medicine_name: '', dosage: '', frequency: '', duration: '', quantity: 1 });
       setShowAddMedicineForm(false);
     }
   };
@@ -474,18 +508,23 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <div className="sticky top-0 bg-gray-50 p-4 border-b">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-gray-900 font-[600] tracking-tight">
-                {sectionConfig[activeSection].label}
-              </h2>
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm text-gray-600 font-[500]">Patient: {patientName}</p>
-              <p className="text-sm text-gray-600 font-[500]">Phone: {patientPhone}</p>
+          <div className="sticky top-0 bg-gray-50 border-b z-10">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-2xl font-semibold text-gray-900 font-[600] tracking-tight">
+                  {sectionConfig[activeSection].label}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <SpeechTranslator />
+                  <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 font-[500]">Patient: {patientName}</p>
+                <p className="text-sm text-gray-600 font-[500]">Phone: {patientPhone}</p>
+              </div>
             </div>
           </div>
 
@@ -611,6 +650,21 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
                         type="text"
                         value={regionId ?? 'N/A'}
                         readOnly
+                        className="w-full px-4 py-3 rounded-xl border-2 border-blue-100 bg-blue-50 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 hover:border-blue-300 transition-all duration-200 placeholder-blue-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 font-[500]">Patient ID</label>
+                      <input
+                        type="text"
+                        value={formData.basicInfo.visit_patient_id}
+                        onChange={(e) => setFormData(prevFormData => ({
+                          ...prevFormData,
+                          basicInfo: {
+                            ...prevFormData.basicInfo,
+                            visit_patient_id: e.target.value,
+                          }
+                        }))}
                         className="w-full px-4 py-3 rounded-xl border-2 border-blue-100 bg-blue-50 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 hover:border-blue-300 transition-all duration-200 placeholder-blue-300"
                       />
                     </div>
@@ -1637,7 +1691,7 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
                       {/* Add Medicine Form */}
                       {showAddMedicineForm && (
                         <div className="bg-white p-4 rounded-lg border border-emerald-100 space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-3 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-emerald-900 mb-2">Medicine Name</label>
                               <input
@@ -1665,6 +1719,16 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
                                 <option value="1 drop"/>
                                 <option value="1 patch"/>
                               </datalist>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-emerald-900 mb-2">Quantity</label>
+                              <input
+                                type="number"
+                                value={newMedicine.quantity}
+                                onChange={(e) => setNewMedicine({...newMedicine, quantity: Number(e.target.value)})}
+                                className="w-full px-3 py-2 rounded-lg border border-emerald-100"
+                                placeholder="Enter quantity"
+                              />
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-emerald-900 mb-2">Frequency</label>
@@ -1727,7 +1791,7 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
                       {/* Display Added Medications */}
                       {formData.prescription.medications.map((med, index) => (
                         <div key={index} className="bg-white p-4 rounded-lg border border-emerald-100">
-                          <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div className="grid grid-cols-5 gap-4 text-sm">
                             <div>
                               <span className="font-medium">Medicine:</span>
                               <p>{med.medicine_name}</p>
@@ -1735,6 +1799,10 @@ export const HealthReportForm: React.FC<HealthReportFormProps> = ({
                             <div>
                               <span className="font-medium">Dosage:</span>
                               <p>{med.dosage}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium">Quantity:</span>
+                              <p>{med.quantity}</p>
                             </div>
                             <div>
                               <span className="font-medium">Frequency:</span>

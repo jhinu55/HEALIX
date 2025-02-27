@@ -51,15 +51,17 @@ const LoadingDots: React.FC = () => (
   </div>
 );
 
-// First, add an interface for the backend payload
+// Update the interface for the backend payload
 interface AIRequestPayload {
   question: string;
+  option: string;
+  imgurl: string;
   conversationsNew: Array<{
     role: string;
     content: string;
   }>;
-  option: string;
-  imgurl: string;
+  visit_patient_id: string | null;
+  is_new_chat: boolean;
 }
 
 export const AIChatWindow: React.FC<AIChatWindowProps> = ({
@@ -79,6 +81,34 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [cachedSummary, setCachedSummary] = useState<{ [key: string]: string }>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isNewChat, setIsNewChat] = useState(true);
+
+  // Add these with other state declarations
+  const [patientId, setPatientId] = useState<string>('');
+  const [visits, setVisits] = useState<Array<{ visit_patient_id: string }>>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Modify the useEffect that runs when session changes
+  useEffect(() => {
+    // Clear messages when component mounts or session changes
+    setMessages([]);
+    updateSessionMessages(session.id, []);
+    
+    // Don't store or cache any summary
+    setCachedSummary({});
+    
+    // Reset other states
+    setNewMessage('');
+    setSelectedFile(null);
+    setSelectedOption(null);
+    setPatientId(''); // Reset patient ID
+    
+    // Set isNewChat to true when a new session is opened
+    setIsNewChat(true);
+    
+  }, [session.id]);
 
   useEffect(() => {
     setMessages(session.messages || []);
@@ -113,6 +143,49 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
     }
   }, []);
 
+  // Add this with your other useEffect hooks
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '40px';
+    }
+  }, [newMessage === '']); // Reset height when message is cleared
+
+  const fetchPatientIds = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('patient_health_records')
+        .select('visit_patient_id');
+  
+      if (error) throw error;
+  
+      // Filter out records with null visit_patient_id
+      const filteredData = data.filter(record => record.visit_patient_id);
+  
+      // Remove duplicates using a Set
+      const uniqueIds = Array.from(new Set(filteredData.map(record => record.visit_patient_id)))
+        .map(id => ({ visit_patient_id: id }));
+  
+      setVisits(uniqueIds);
+    } catch (error) {
+      console.error('Error fetching patient ids:', error);
+    }
+  };
+  
+  useEffect(() => {
+    fetchPatientIds();
+  }, []);
+  // Add this useEffect for handling clicks outside the dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isDropdownOpen && !event.target?.closest('.patient-id-selector')) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
+
   const toggleVoiceInput = () => {
     if (isRecording) {
       recognitionRef.current?.stop();
@@ -129,13 +202,12 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
     }
   };
 
-  // Update the handleSend function to handle both image and text
+  // Modify the handleSend function's payload creation
   const handleSend = async () => {
-    // Check if there's either a message or a file
     if (!newMessage.trim() && !selectedFile) {
       return;
     }
-  
+
     setIsLoading(true);
     
     try {
@@ -185,136 +257,75 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
           setUploadProgress(0);
         }
       }
-  
-      // Create message object with both image and text
+
+      // Create message object
       const messageObj: ChatMessage = {
         id: Date.now().toString(),
         sender: 'doctor',
-        content: newMessage || '', // Keep the text message even with image
+        content: newMessage || '',
         created_at: new Date().toISOString(),
         message_type: selectedFile ? 'image' : 'text',
         file_url: fileUrl || undefined
       };
-  
-      // Update the display to show both image and text
-      const messageDisplay = (
-        <>
-          {messageObj.content && (
-            <p className="whitespace-pre-wrap break-words mb-2">{messageObj.content}</p>
-          )}
-          {messageObj.file_url && (
-            <div className="relative group">
-              {/* ... existing image display code ... */}
-            </div>
-          )}
-        </>
-      );
-  
-      // Save message to database with better error handling and logging
-      try {
-        console.log('Attempting to save message:', {
-          session_id: session.id,
-          content: messageObj.content,
-          message_type: messageObj.message_type,
-          file_url: messageObj.file_url,
-          sender_type: 'doctor' // Changed from 'user' to 'doctor'
-        });
-    
-        const { data, error } = await supabase
-          .from('ai_chat_messages')
-          .insert([{
-            session_id: session.id,
-            content: messageObj.content,
-            message_type: messageObj.message_type,
-            file_url: messageObj.file_url,
-            sender_type: 'doctor', // Changed from 'user' to 'doctor'
-            created_at: new Date().toISOString() // Explicitly set created_at
-          }])
-          .select();
-    
-        if (error) {
-          console.error('Database error:', error);
-          throw error;
-        }
-    
-        console.log('Message saved successfully:', data);
-    
-      } catch (error) {
-        console.error('Error saving message:', error);
-        // Continue with chat but log the error
-      }
-    
-      // Add user message to chat
+
+      // Update messages array and UI
       const updatedMessages = [...messages, messageObj];
       setMessages(updatedMessages);
       updateSessionMessages(session.id, updatedMessages);
-      setNewMessage('');
-      setIsLoading(true); // Start loading
-  
-      // Inside handleSend function, after message insertion
-      const { data: verifyData, error: verifyError } = await supabase
-        .from('ai_chat_messages')
-        .select('*')
-        .eq('session_id', session.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-  
-      if (verifyError) {
-        console.error('Verification error:', verifyError);
-      } else {
-        console.log('Saved message record:', verifyData);
-      }
-    
+
       try {
         // Format conversations for AI service
         const conversationsNew = updatedMessages.map(msg => ({
           role: msg.sender === 'doctor' ? 'user' : 'assistant',
           content: msg.content
         }));
-  
-        // Get the latest image URL if any exists in the conversation
-        const latestImage = [...updatedMessages, messageObj]
-          .reverse()
-          .find(msg => msg.message_type === 'image')?.file_url || 'NA';
-  
-        // Format payload for Python Flask server with both text and image
+
+        // Format payload for Python Flask server - send null if patientId is empty
         const aiPayload: AIRequestPayload = {
-          question: messageObj.content || "Analyze this image", // Use text if available, or default prompt
+          question: messageObj.content || "Analyze this image",
+          option: selectedOption || 'general',
+          imgurl: fileUrl || '',
           conversationsNew: conversationsNew,
-          option: selectedOption?.toUpperCase().charAt(0) || 'A',
-          imgurl: fileUrl || 'NA'
+          visit_patient_id: patientId.trim() || null, // Will be null if empty string
+          is_new_chat: isNewChat // Send the new chat flag
         };
-  
+
         console.log('Sending to AI service:', {
           url: `${import.meta.env.VITE_API_URL}/doctor/chat-ai`,
           payload: aiPayload
         });
-  
+
         const response = await aiChatService.sendMessage(
           aiPayload.question,
-          aiPayload.conversationsNew,
           aiPayload.option,
-          aiPayload.imgurl
+          aiPayload.imgurl,
+          aiPayload.conversationsNew,
+          aiPayload.visit_patient_id,
+          aiPayload.is_new_chat // Send the new chat flag
         );
-  
+
+        // After sending the first message, set isNewChat to false
+        setIsNewChat(false);
+
         if (!response || !response.response) {
           throw new Error('Invalid response format from server');
         }
-  
-        // Add AI response to chat
-        const aiResponse: ChatMessage = {
-          id: Date.now().toString(),
-          sender: 'ai',
-          content: response.response,
-          created_at: new Date().toISOString(),
-          message_type: 'text'
-        };
-  
-        const newMessages = [...updatedMessages, aiResponse];
-        setMessages(newMessages);
-        updateSessionMessages(session.id, newMessages);
-  
+
+        // Remove summary storage
+        if (response && response.response) {
+          const aiResponse: ChatMessage = {
+            id: Date.now().toString(),
+            sender: 'ai',
+            content: response.response,
+            created_at: new Date().toISOString(),
+            message_type: 'text'
+          };
+
+          const newMessages = [...updatedMessages, aiResponse];
+          setMessages(newMessages);
+          updateSessionMessages(session.id, newMessages);
+        }
+
       } catch (error) {
         console.error('Error in AI communication:', error);
         const errorMessage: ChatMessage = {
@@ -327,17 +338,15 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
         const newMessages = [...updatedMessages, errorMessage];
         setMessages(newMessages);
         updateSessionMessages(session.id, newMessages);
-      } finally {
-        setIsLoading(false); // Stop loading
       }
-  
-      // Clear both message and file
+
+      // Clear inputs
       setNewMessage('');
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-  
+
     } catch (error) {
       console.error('Error in handleSend:', error);
       alert(error instanceof Error ? error.message : 'Failed to send message');
@@ -361,6 +370,22 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
       setSelectedOption(option);
       setNewMessage(message);
     }
+  };
+
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Calculate new height (with max-height of 150px)
+    const newHeight = Math.min(textarea.scrollHeight, 150);
+    
+    // Set the new height
+    textarea.style.height = `${newHeight}px`;
+    
+    // Update the message state
+    setNewMessage(textarea.value);
   };
 
   return (
@@ -502,15 +527,63 @@ export const AIChatWindow: React.FC<AIChatWindowProps> = ({
           </button>
           <textarea
             value={newMessage}
-            onChange={e => setNewMessage(e.target.value)}
+            onChange={handleTextareaInput}
             onKeyPress={handleKeyPress}
             placeholder="Type or speak your message..."
             className="flex-1 border rounded-md p-2 mx-2 resize-none"
             rows={1}
+            ref={textareaRef}
           />
-          <button onClick={handleSend} className="p-2">
-            <Send className="h-6 w-6 text-blue-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative patient-id-selector">
+              <div className="flex items-center border rounded-md">
+                <input
+                  type="text"
+                  value={patientId}
+                  onChange={(e) => {
+                    setPatientId(e.target.value);
+                    setIsDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsDropdownOpen(true)}
+                  placeholder="Patient ID"
+                  className="w-32 px-2 py-1 text-sm"
+                />
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="px-2 py-1 text-gray-500 hover:text-gray-700"
+                >
+                  ▼
+                </button>
+              </div>
+              
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {visits
+                    .filter(v => v.visit_patient_id.toLowerCase().includes(patientId.toLowerCase()))
+                    .map((visit) => (
+                      <div
+                        key={visit.visit_patient_id}
+                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                        onClick={() => {
+                          setPatientId(visit.visit_patient_id);
+                          setIsDropdownOpen(false);
+                        }}
+                      >
+                        {visit.visit_patient_id}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+            
+            <button 
+              onClick={handleSend} 
+              className="p-2 hover:bg-gray-100 rounded-full"
+              disabled={isLoading}
+            >
+              <Send className={`h-6 w-6 ${isLoading ? 'text-gray-300' : 'text-blue-500'}`} />
+            </button>
+          </div>
         </div>
         {recognitionError && (
           <div className="text-red-500 text-sm mt-2">{recognitionError}</div>

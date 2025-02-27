@@ -83,14 +83,10 @@ export const AppointmentList: React.FC<AppointmentListProps> = ({ doctorRefId })
 
   const fetchSeenAppointments = async (doctorRefId: string) => {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
       const { data, error } = await supabase
         .from('seen_patients')
         .select('appointment_id')
-        .eq('doctor_id', doctorRefId)
-        .gte('seen_at', today.toISOString());
+        .eq('doctor_id', doctorRefId);
 
       if (error) throw error;
       setSeenAppointments(data?.map(item => item.appointment_id) || []);

@@ -22,6 +22,7 @@ interface Appointment {
 }
 
 interface AppointmentFormData {
+  visit_patient_id: string;
   patient_name: string;
   patient_phone: string;
   patient_aadhar: string;
@@ -37,6 +38,7 @@ interface AppointmentFormData {
 }
 
 const initialFormData: AppointmentFormData = {
+  visit_patient_id: '',
   patient_name: '',
   patient_phone: '',
   patient_aadhar: '',
@@ -129,6 +131,7 @@ export const AppointmentManagement = () => {
       if (data) {
         setSelectedAppointment(data);
         setFormData({
+          visit_patient_id: data.visit_patient_id || '',
           patient_name: data.patient_name,
           patient_phone: data.patient_phone,
           patient_aadhar: data.patient_aadhar,
@@ -158,6 +161,7 @@ export const AppointmentManagement = () => {
       const { error } = await supabase
         .from('appointments')
         .update({
+          visit_patient_id: formData.visit_patient_id,
           patient_name: formData.patient_name,
           patient_phone: formData.patient_phone,
           patient_aadhar: formData.patient_aadhar,
@@ -270,6 +274,7 @@ export const AppointmentManagement = () => {
       const { error } = await supabase
         .from('appointments')
         .insert([{
+          visit_patient_id: formData.visit_patient_id,
           patient_name: formData.patient_name,
           patient_phone: formData.patient_phone,
           patient_aadhar: formData.patient_aadhar,
@@ -455,7 +460,7 @@ export const AppointmentManagement = () => {
         {/* Add Form Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <h3 className="text-xl font-semibold mb-4">Add New Appointment</h3>
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -488,11 +493,22 @@ export const AppointmentManagement = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
-                        Aadhar Number
+                        Patient ID (Optional)
                       </label>
                       <input
                         type="text"
-                        required
+                        value={formData.visit_patient_id}
+                        onChange={(e) => setFormData({ ...formData, visit_patient_id: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Aadhar Number (Optional)
+                      </label>
+                      <input
+                        type="text"
                         value={formData.patient_aadhar}
                         onChange={(e) => setFormData({ ...formData, patient_aadhar: e.target.value })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -632,7 +648,7 @@ export const AppointmentManagement = () => {
         {/* Edit Form Modal */}
         {showEditForm && selectedAppointment && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <h3 className="text-xl font-semibold mb-4">Edit Appointment</h3>
                 <form onSubmit={handleUpdate} className="space-y-4">
@@ -665,11 +681,22 @@ export const AppointmentManagement = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
-                        Aadhar Number
+                        Patient ID (Optional)
                       </label>
                       <input
                         type="text"
-                        required
+                        value={formData.visit_patient_id}
+                        onChange={(e) => setFormData({ ...formData, visit_patient_id: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Aadhar Number (Optional)
+                      </label>
+                      <input
+                        type="text"
                         value={formData.patient_aadhar}
                         onChange={(e) => setFormData({ ...formData, patient_aadhar: e.target.value })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -765,7 +792,7 @@ export const AppointmentManagement = () => {
                         value={formData.appointment_date}
                         onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                      /> ```
+                      />
                     </div>
 
                     <div className="md:col-span-2">

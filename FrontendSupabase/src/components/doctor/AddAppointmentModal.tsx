@@ -104,10 +104,10 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ doctor
   }  
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-100 rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         <div className="flex justify-between items-center p-6 border-b bg-white">
-          <h2 className="text-3xl font-semibold text-gray-800">Add New Appointment</h2>
+          <h2 className="text-3xl font-semibold text-blue-800">Add New Appointment</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="h-6 w-6" />
           </button>
@@ -168,7 +168,6 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ doctor
                 <label className="block text-sm font-medium text-gray-700">Aadhar Number</label>
                 <input
                   type="text"
-                  required
                   value={formData.patient_aadhar}
                   onChange={(e) => setFormData({ ...formData, patient_aadhar: e.target.value })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -271,7 +270,7 @@ export const AddAppointmentModal: React.FC<AddAppointmentModalProps> = ({ doctor
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-md disabled:opacity-50"
               >
                 {loading ? 'Adding...' : 'Add Appointment'}
               </button>

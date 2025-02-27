@@ -18,6 +18,9 @@ import { AuthGuard } from './components/AuthGuard';
 import { AssistantAuthGuard } from './components/AssistantAuthGuard';
 import AdminLogin from './pages/AdminLogin';
 import CheckHistory from './components/doctor/CheckHistory';
+import { MedicineManagement } from './components/doctor/MedicineManagement';
+import { AllSeenPatients } from './components/doctor/AllSeenPatients';
+import { CommunityHealth } from './components/doctor/CommunityHealth';
 
 export const router = createBrowserRouter([
   {
@@ -47,10 +50,28 @@ export const router = createBrowserRouter([
   {
     path: '/doctor',
     element: <AuthGuard><DoctorDashboard /></AuthGuard>,
-  },
-  {
-    path: '/doctor/patients',
-    element: <DoctorDashboard />,
+    children: [
+      {
+        index: true,
+        element: <div>Select a section from the sidebar</div>
+      },
+      {
+        path: 'patients',
+        element: <AllSeenPatients />
+      },
+      {
+        path: 'medicine-management',
+        element: <MedicineManagement />
+      },
+      {
+        path: 'messages',
+        element: <div>Messages Content</div>
+      },
+      {
+        path: 'community-health',
+        element: <CommunityHealth />
+      },
+    ]
   },
   {
     path: '/doctor/appointments',
@@ -58,14 +79,6 @@ export const router = createBrowserRouter([
   },
   {
     path: '/doctor/analytics',
-    element: <DoctorDashboard />,
-  },
-  {
-    path: '/doctor/messages',
-    element: <DoctorDashboard />,
-  },
-  {
-    path: '/doctor/community-health',
     element: <DoctorDashboard />,
   },
   {
