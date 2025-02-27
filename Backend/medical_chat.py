@@ -6,7 +6,7 @@ from io import BytesIO
 from supabase_client import supabase
 from groq import Groq
 
-os.environ["GROQ_API_KEY"] = "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"
+os.environ["GROQ_API_KEY"] = <GROQ_API_KEY>
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 print(os.getenv("GROQ_API_KEY"))
 # Configure logging
