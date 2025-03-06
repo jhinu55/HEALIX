@@ -96,13 +96,6 @@ Backend:Supabase,Node.js,Python,Flask,Lanchain,Tensorflow,Keras,Numpy,Pandas
 
 ## Contact
 
-
-Indranil Saha:
-
-Github: https://github.com/INDRANIL-SAHA-INS
-
-Linkedin : https://www.linkedin.com/in/indranilsaha6
-
 Shreya Baid: 
 
 Github: https://github.com/jhinu55
