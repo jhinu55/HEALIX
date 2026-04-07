@@ -96,7 +96,7 @@ Backend:Supabase,Node.js,Python,Flask,Lanchain,Tensorflow,Keras,Numpy,Pandas
 
 ## Contact
 
-Shreya Baid: 
+Shreya Baid
 
 Github: https://github.com/jhinu55
 
